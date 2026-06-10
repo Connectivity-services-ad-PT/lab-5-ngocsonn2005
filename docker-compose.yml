@@ -19,8 +19,13 @@ services:
       - class-net
     ports:
       - "${APP_PORT:-8000}:8000"
+
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""
+        ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -48,18 +53,29 @@ services:
   ai-service:
     image: python:3.11-slim
     container_name: fit4110-ai-lab05
+
     working_dir: /service
+
     volumes:
       - ./src/ai_service:/service
-    command: ["python", "main.py"]
+
+    command: >
+      sh -c "pip install fastapi uvicorn requests &&
+            uvicorn main:app --host 0.0.0.0 --port 9000"
+
     networks:
       - team-internal
+
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import requests; import sys; sys.exit(0) if requests.get('http://localhost:9000/health').status_code == 200 else sys.exit(1)\""]
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import requests,sys;sys.exit(0 if requests.get('http://localhost:9000/health').status_code==200 else 1)\""
+        ]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 15s
 
 networks:
   team-internal:
